@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Stuckert Stars</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Georgia, serif; background: #fff; min-height: 100vh; padding: 20px 16px 60px; max-width: 500px; margin: 0 auto; }
+h1 { font-size: 26px; font-weight: 800; color: #1a1a1a; text-align: center; margin-bottom: 4px; }
+.subtitle { text-align: center; color: #bbb; font-size: 12px; font-style: italic; margin-bottom: 20px; }
+
+.tabs { display: flex; gap: 6px; background: #f5f5f5; padding: 4px; border-radius: 12px; margin-bottom: 22px; }
+.tab { flex: 1; padding: 13px 0; border: none; cursor: pointer; background: transparent; color: #999; font-family: Georgia, serif; font-size: 15px; font-weight: 600; border-radius: 9px; }
+.tab.active { background: #1a1a1a; color: #fff; }
+
+.view { display: none; }
+.view.active { display: block; }
+
+.kid-card { border-radius: 16px; padding: 18px 16px 16px; background: #fafafa; border: 1.5px solid #eee; border-left: 6px solid #ccc; margin-bottom: 18px; position: relative; overflow: hidden; }
+.kid-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.kid-name { font-size: 23px; font-weight: 800; }
+.kid-emoji { font-size: 22px; }
+.kid-count { font-size: 23px; font-weight: 800; }
+.kid-stars { font-size: 26px; line-height: 1.55; letter-spacing: 2px; word-break: break-all; min-height: 38px; margin-bottom: 16px; }
+
+.btn-row { display: flex; gap: 12px; margin-bottom: 10px; }
+.btn-minus, .btn-plus { flex: 1; height: 76px; border-radius: 16px; font-size: 40px; font-weight: 700; cursor: pointer; border: none; }
+.btn-reset { width: 100%; padding: 13px 0; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: Georgia, serif; background: #fff; border: 1.5px solid #e0e0e0; color: #aaa; }
+.btn-reset:disabled { opacity: 0.3; }
+
+/* Inline confirm overlay inside card */
+.confirm-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.97);
+  border-radius: 16px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+  z-index: 10;
+}
+.confirm-overlay.show { display: flex; }
+.confirm-msg { font-size: 16px; font-weight: 700; color: #333; text-align: center; }
+.confirm-btns { display: flex; gap: 10px; width: 100%; }
+.confirm-yes { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; font-family: Georgia, serif; color: #fff; }
+.confirm-no  { flex: 1; padding: 14px; border-radius: 12px; border: 1.5px solid #ddd; background: #fff; font-size: 16px; font-weight: 600; cursor: pointer; font-family: Georgia, serif; color: #888; }
+
+.process-all { display: block; width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #1a1a1a; background: #1a1a1a; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: Georgia, serif; margin-bottom: 24px; }
+
+hr { border: none; border-top: 1px solid #f0f0f0; margin: 18px 0; }
+.section-label { font-size: 11px; font-weight: 700; color: #bbb; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px; }
+.activity-list { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.activity-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #fafafa; border: 1px solid #f0f0f0; font-size: 13px; }
+.badge { width: 24px; height: 24px; border-radius: 6px; font-size: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.a-name { font-weight: 600; min-width: 58px; }
+.a-desc { flex: 1; color: #777; }
+.a-date { color: #bbb; font-size: 11px; }
+
+.totals-row { display: flex; gap: 8px; margin-bottom: 22px; }
+.total-card { flex: 1; border-radius: 12px; padding: 14px 8px; text-align: center; }
+.total-num { font-size: 28px; font-weight: 700; }
+.total-lbl { font-size: 11px; color: #999; margin-top: 2px; }
+.period-toggle { display: flex; gap: 6px; margin-bottom: 18px; }
+.period-btn { flex: 1; padding: 10px 0; border-radius: 8px; border: 1.5px solid #e0e0e0; background: #fff; color: #999; font-size: 12px; font-weight: 600; cursor: pointer; font-family: Georgia, serif; }
+.period-btn.active { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
+.period-card { border: 1.5px solid #eee; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+.period-head { background: #f8f8f8; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
+.period-title { font-weight: 700; font-size: 13px; color: #333; }
+.period-tot { font-size: 13px; color: #888; font-weight: 600; }
+.period-body { padding: 12px 14px; }
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.bar-name { font-size: 13px; font-weight: 600; min-width: 64px; }
+.bar-track { flex: 1; background: #f0f0f0; border-radius: 6px; height: 20px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 6px; }
+.bar-val { font-size: 14px; font-weight: 700; min-width: 30px; text-align: right; }
+.all-events { display: flex; flex-direction: column; gap: 6px; }
+.event-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: #fafafa; border: 1px solid #f0f0f0; }
+.ev-name { font-weight: 700; font-size: 14px; min-width: 68px; }
+.ev-desc { flex: 1; font-size: 13px; color: #555; }
+.ev-date { font-size: 11px; color: #bbb; }
+.empty { text-align: center; padding: 40px 0; color: #ccc; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>⭐ Stuckert Stars</h1>
+<p class="subtitle">track · reset · report</p>
+
+<div class="tabs">
+  <button class="tab active" id="tab-tracker">⭐ Tracker</button>
+  <button class="tab" id="tab-report">📊 Board Report</button>
+</div>
+
+<div class="view active" id="view-tracker">
+  <div id="kid-cards"></div>
+  <button class="process-all" id="btn-process-all">✓ Process All to Home Board</button>
+  <hr>
+  <div class="section-label">Recent Activity</div>
+  <div class="activity-list" id="activity-list"></div>
+</div>
+
+<div class="view" id="view-report">
+  <div class="section-label">All-Time Sent to Board</div>
+  <div class="totals-row" id="totals-row"></div>
+  <div class="period-toggle">
+    <button class="period-btn active" data-period="monthly">Monthly</button>
+    <button class="period-btn" data-period="weekly">Weekly</button>
+    <button class="period-btn" data-period="all">All Events</button>
+  </div>
+  <div id="report-body"></div>
+</div>
+
+<script>
+var KIDS = [
+  { name: "Darrow", emoji: "⚔️",  color: "#e05555" },
+  { name: "Rowen",  emoji: "🧌",  color: "#3a9e6e" },
+  { name: "Maven",  emoji: "👸",  color: "#c85b8a" }
+];
+
+function loadData(key, fallback) {
+  try { var s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback; }
+  catch(e) { return fallback; }
+}
+function saveData() {
+  localStorage.setItem("sc_stars",     JSON.stringify(stars));
+  localStorage.setItem("sc_activity",  JSON.stringify(activityLog));
+  localStorage.setItem("sc_processed", JSON.stringify(processed));
+}
+
+var stars       = loadData("sc_stars",     { Darrow: 4, Rowen: 3, Maven: 2 });
+var activityLog = loadData("sc_activity",  []);
+var processed   = loadData("sc_processed", []);
+var reportPeriod = "monthly";
+
+// Tabs
+document.getElementById("tab-tracker").addEventListener("click", function() { switchTab("tracker"); });
+document.getElementById("tab-report").addEventListener("click",  function() { switchTab("report"); });
+function switchTab(v) {
+  document.getElementById("view-tracker").classList.toggle("active", v === "tracker");
+  document.getElementById("view-report").classList.toggle("active",  v === "report");
+  document.getElementById("tab-tracker").classList.toggle("active", v === "tracker");
+  document.getElementById("tab-report").classList.toggle("active",  v === "report");
+  if (v === "report") renderReport();
+}
+
+// Period buttons
+document.querySelectorAll(".period-btn").forEach(function(btn) {
+  btn.addEventListener("click", function() {
+    reportPeriod = btn.getAttribute("data-period");
+    document.querySelectorAll(".period-btn").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    renderReport();
+  });
+});
+
+// Process all
+document.getElementById("btn-process-all").addEventListener("click", function() {
+  var total = KIDS.reduce(function(s,k){ return s + (stars[k.name]||0); }, 0);
+  if (!total) return;
+  var now = Date.now();
+  KIDS.forEach(function(k, i) {
+    var count = stars[k.name] || 0;
+    if (!count) return;
+    processed.unshift({ id: now+i, name: k.name, stars: count, ts: now, type: "processed" });
+    activityLog.unshift({ id: now+100+i, name: k.name, delta: -count, ts: now, processed: true });
+    stars[k.name] = 0;
+  });
+  saveData();
+  renderTracker();
+});
+
+function addStar(name) {
+  stars[name] = (stars[name] || 0) + 1;
+  activityLog.unshift({ id: Date.now(), name: name, delta: 1, ts: Date.now() });
+  if (activityLog.length > 500) activityLog = activityLog.slice(0, 500);
+  saveData();
+  renderTracker();
+}
+
+function removeStar(name) {
+  if ((stars[name] || 0) === 0) return;
+  stars[name] = stars[name] - 1;
+  activityLog.unshift({ id: Date.now(), name: name, delta: -1, ts: Date.now() });
+  if (activityLog.length > 500) activityLog = activityLog.slice(0, 500);
+  saveData();
+  renderTracker();
+}
+
+function doReset(name) {
+  var count = stars[name] || 0;
+  if (!count) return;
+  var now = Date.now();
+  processed.unshift({ id: now, name: name, stars: count, ts: now, type: "reset" });
+  activityLog.unshift({ id: now+1, name: name, delta: -count, ts: now, reset: true });
+  stars[name] = 0;
+  saveData();
+  renderTracker();
+}
+
+function renderTracker() {
+  var container = document.getElementById("kid-cards");
+  container.innerHTML = "";
+
+  KIDS.forEach(function(kid) {
+    var name  = kid.name;
+    var color = kid.color;
+    var count = stars[name] || 0;
+
+    // Card
+    var card = document.createElement("div");
+    card.className = "kid-card";
+    card.style.borderLeftColor = color;
+
+    // Header: Name emoji count
+    var header = document.createElement("div");
+    header.className = "kid-header";
+    var nameEl = document.createElement("span");
+    nameEl.className = "kid-name";
+    nameEl.style.color = color;
+    nameEl.textContent = name;
+    var emojiEl = document.createElement("span");
+    emojiEl.className = "kid-emoji";
+    emojiEl.textContent = kid.emoji;
+    var countEl = document.createElement("span");
+    countEl.className = "kid-count";
+    countEl.style.color = color;
+    countEl.textContent = count > 0 ? count : "";
+    header.appendChild(nameEl);
+    header.appendChild(emojiEl);
+    header.appendChild(countEl);
+
+    // Stars
+    var starsEl = document.createElement("div");
+    starsEl.className = "kid-stars";
+    starsEl.textContent = count === 0 ? "" : "⭐".repeat(count);
+    if (count === 0) {
+      starsEl.innerHTML = '<span style="color:#ccc;font-size:14px">no stars yet</span>';
+    }
+
+    // +/- buttons
+    var btnRow = document.createElement("div");
+    btnRow.className = "btn-row";
+
+    var minusBtn = document.createElement("button");
+    minusBtn.className = "btn-minus";
+    minusBtn.textContent = "−";
+    minusBtn.style.cssText = count === 0
+      ? "background:#f0f0f0;color:#ccc;border:3px solid #e8e8e8;"
+      : "background:#fff;color:"+color+";border:3px solid "+color+";";
+    if (count === 0) {
+      minusBtn.disabled = true;
+    } else {
+      (function(n){ minusBtn.addEventListener("click", function(){ removeStar(n); }); })(name);
+    }
+
+    var plusBtn = document.createElement("button");
+    plusBtn.className = "btn-plus";
+    plusBtn.textContent = "+";
+    plusBtn.style.cssText = "background:"+color+";color:#fff;";
+    (function(n){ plusBtn.addEventListener("click", function(){ addStar(n); }); })(name);
+
+    btnRow.appendChild(minusBtn);
+    btnRow.appendChild(plusBtn);
+
+    // Reset button
+    var resetBtn = document.createElement("button");
+    resetBtn.className = "btn-reset";
+    resetBtn.textContent = "↺ Reset";
+    if (count === 0) {
+      resetBtn.disabled = true;
+    } else {
+      resetBtn.style.color = "#666";
+      resetBtn.style.borderColor = "#ccc";
+    }
+
+    // Inline confirm overlay (no confirm() dialog needed)
+    var overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
+
+    var msg = document.createElement("div");
+    msg.className = "confirm-msg";
+    msg.textContent = "Reset " + name + "'s " + count + " star" + (count !== 1 ? "s" : "") + "?";
+
+    var confirmBtns = document.createElement("div");
+    confirmBtns.className = "confirm-btns";
+
+    var yesBtn = document.createElement("button");
+    yesBtn.className = "confirm-yes";
+    yesBtn.textContent = "Yes, Reset";
+    yesBtn.style.background = color;
+    (function(n){ yesBtn.addEventListener("click", function(){ doReset(n); }); })(name);
+
+    var noBtn = document.createElement("button");
+    noBtn.className = "confirm-no";
+    noBtn.textContent = "Cancel";
+    noBtn.addEventListener("click", function(){ overlay.classList.remove("show"); });
+
+    confirmBtns.appendChild(yesBtn);
+    confirmBtns.appendChild(noBtn);
+    overlay.appendChild(msg);
+    overlay.appendChild(confirmBtns);
+
+    // Show overlay on reset click
+    resetBtn.addEventListener("click", function(){
+      msg.textContent = "Reset " + name + "'s " + (stars[name]||0) + " star" + ((stars[name]||0) !== 1 ? "s" : "") + "?";
+      overlay.classList.add("show");
+    });
+
+    card.appendChild(header);
+    card.appendChild(starsEl);
+    card.appendChild(btnRow);
+    card.appendChild(resetBtn);
+    card.appendChild(overlay);
+    container.appendChild(card);
+  });
+
+  // Activity log
+  var list = document.getElementById("activity-list");
+  list.innerHTML = "";
+  if (!activityLog.length) {
+    list.innerHTML = '<p style="color:#ccc;font-size:13px;text-align:center;padding:12px 0">No activity yet</p>';
+    return;
+  }
+
+  var twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
+  var recent = activityLog.filter(function(e){ return e.ts >= twoWeeksAgo; });
+  if (!recent.length) {
+    list.innerHTML = '<p style="color:#ccc;font-size:13px;text-align:center;padding:12px 0">No activity in the past 2 weeks</p>';
+    return;
+  }
+
+  var today     = new Date(); today.setHours(0,0,0,0);
+  var yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1);
+  function dayLabel(ts) {
+    var d = new Date(ts); d.setHours(0,0,0,0);
+    if (d.getTime() === today.getTime())     return "Today";
+    if (d.getTime() === yesterday.getTime()) return "Yesterday";
+    return d.toLocaleDateString("en-US", { weekday:"long", month:"short", day:"numeric" });
+  }
+
+  var lastLabel = null;
+  recent.forEach(function(e) {
+    var label = dayLabel(e.ts);
+    if (label !== lastLabel) {
+      var sep = document.createElement("div");
+      sep.style.cssText = "font-size:11px;font-weight:700;color:#bbb;letter-spacing:1px;text-transform:uppercase;padding:8px 2px 4px;border-top:"+(lastLabel?"1px solid #f5f5f5":"none")+";margin-top:"+(lastLabel?"4px":"0")+";";
+      sep.textContent = label;
+      list.appendChild(sep);
+      lastLabel = label;
+    }
+    var kid   = KIDS.find(function(k){ return k.name === e.name; });
+    var color = kid ? kid.color : "#888";
+    var bg    = e.processed ? "#fff8e1" : e.reset ? "#f3e5f5" : e.delta > 0 ? "#e8f5e9" : "#fce4ec";
+    var icon  = e.processed ? "✓" : e.reset ? "↺" : e.delta > 0 ? "+" : "−";
+    var desc  = e.processed ? "sent " + Math.abs(e.delta) + " to board"
+              : e.reset     ? "reset " + Math.abs(e.delta) + " stars"
+              : (e.delta > 0 ? "+" : "") + e.delta + " star" + (Math.abs(e.delta) !== 1 ? "s" : "");
+    var time  = new Date(e.ts).toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit" });
+    var item  = document.createElement("div");
+    item.className = "activity-item";
+    item.innerHTML = '<div class="badge" style="background:' + bg + '">' + icon + '</div>'
+      + '<span class="a-name" style="color:' + color + '">' + e.name + '</span>'
+      + '<span class="a-desc">' + desc + '</span>'
+      + '<span class="a-date">' + time + '</span>';
+    list.appendChild(item);
+  });
+}
+
+function renderReport() {
+  var grandTotal = 0;
+  var totalsRow = document.getElementById("totals-row");
+  totalsRow.innerHTML = "";
+  KIDS.forEach(function(kid) {
+    var t = processed.filter(function(e){ return e.name === kid.name && e.type === "processed"; })
+                     .reduce(function(s,e){ return s + e.stars; }, 0);
+    grandTotal += t;
+    var card = document.createElement("div");
+    card.className = "total-card";
+    card.style.cssText = "background:"+kid.color+"12;border:1.5px solid "+kid.color+"33;";
+    card.innerHTML = '<div class="total-num" style="color:'+kid.color+'">'+t+'</div><div class="total-lbl">'+kid.name+'</div>';
+    totalsRow.appendChild(card);
+  });
+  var gc = document.createElement("div");
+  gc.className = "total-card";
+  gc.style.cssText = "background:#f5f5f5;border:1.5px solid #e0e0e0;";
+  gc.innerHTML = '<div class="total-num" style="color:#333">'+grandTotal+'</div><div class="total-lbl">Total</div>';
+  totalsRow.appendChild(gc);
+
+  var body = document.getElementById("report-body");
+  body.innerHTML = "";
+
+  if (!processed.length) {
+    body.innerHTML = '<div class="empty">📋<br>No events yet.</div>';
+    return;
+  }
+
+  if (reportPeriod === "all") {
+    var wrap = document.createElement("div");
+    wrap.className = "all-events";
+    processed.forEach(function(e) {
+      var kid = KIDS.find(function(k){ return k.name === e.name; });
+      var color = kid ? kid.color : "#888";
+      var isReset = e.type === "reset";
+      var item = document.createElement("div");
+      item.className = "event-item";
+      item.innerHTML = '<span style="font-size:15px;flex-shrink:0">'+(isReset?"↺":"✓")+'</span>'
+        +'<span class="ev-name" style="color:'+color+'">'+e.name+'</span>'
+        +'<span class="ev-desc">'+e.stars+' star'+(e.stars!==1?"s":"")+' — <em style="color:'+(isReset?"#bbb":"#3a9e6e")+'">'+(isReset?"reset":"sent to board")+'</em></span>'
+        +'<span class="ev-date">'+fmtDate(e.ts)+'</span>';
+      wrap.appendChild(item);
+    });
+    body.appendChild(wrap);
+    return;
+  }
+
+  var byPeriod = {};
+  processed.forEach(function(e) {
+    var key = reportPeriod === "weekly" ? getWeekKey(e.ts) : getMonthKey(e.ts);
+    if (!byPeriod[key]) byPeriod[key] = {};
+    if (!byPeriod[key][e.name]) byPeriod[key][e.name] = { processed: 0, reset: 0 };
+    byPeriod[key][e.name][e.type === "reset" ? "reset" : "processed"] += e.stars;
+  });
+
+  Object.keys(byPeriod).sort(function(a,b){ return b.localeCompare(a); }).forEach(function(period) {
+    var data = byPeriod[period];
+    var total = KIDS.reduce(function(s,k){ return s+((data[k.name]&&data[k.name].processed)||0); },0);
+    var maxVal = Math.max.apply(null, KIDS.map(function(k){ return (data[k.name]&&data[k.name].processed)||0; }).concat([1]));
+    var label = reportPeriod === "weekly" ? fmtWeek(period) : fmtMonth(period);
+
+    var pcard = document.createElement("div");
+    pcard.className = "period-card";
+    var head = document.createElement("div");
+    head.className = "period-head";
+    head.innerHTML = '<span class="period-title">'+label+'</span><span class="period-tot">'+total+' ⭐ to board</span>';
+    var pbody = document.createElement("div");
+    pbody.className = "period-body";
+
+    KIDS.forEach(function(kid) {
+      var val = (data[kid.name]&&data[kid.name].processed)||0;
+      var rst = (data[kid.name]&&data[kid.name].reset)||0;
+      var pct = (val/maxVal*100).toFixed(1);
+      var row = document.createElement("div");
+      row.className = "bar-row";
+      row.innerHTML = '<span class="bar-name" style="color:'+kid.color+'">'+kid.name+'</span>'
+        +'<div class="bar-track"><div class="bar-fill" style="width:'+(val>0?pct:0)+'%;background:'+kid.color+'"></div></div>'
+        +'<span class="bar-val" style="color:'+(val>0?kid.color:"#ccc")+'">'+val+(rst>0?' <span style="font-size:10px;color:#bbb">(↺'+rst+')</span>':"")+' </span>';
+      pbody.appendChild(row);
+    });
+
+    pcard.appendChild(head);
+    pcard.appendChild(pbody);
+    body.appendChild(pcard);
+  });
+}
+
+function fmtDate(ts) { return new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
+function fmtShort(ts){ return new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric"}); }
+function getWeekKey(ts){ var d=new Date(ts); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()); return d.toISOString().slice(0,10); }
+function getMonthKey(ts){ var d=new Date(ts); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function fmtMonth(key){ var p=key.split("-"); return new Date(p[0],p[1]-1,1).toLocaleDateString("en-US",{month:"long",year:"numeric"}); }
+function fmtWeek(key){ var s=new Date(key),e=new Date(key); e.setDate(e.getDate()+6); var f=function(d){return d.toLocaleDateString("en-US",{month:"short",day:"numeric"});}; return f(s)+" – "+f(e); }
+
+renderTracker();
+</script>
+</body>
+</html>
